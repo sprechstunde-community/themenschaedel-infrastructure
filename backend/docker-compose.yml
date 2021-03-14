@@ -1,0 +1,106 @@
+version: '3'
+
+services:
+  app:
+    image: challenger1304/themenschaedel-backend:nightly
+    restart: unless-stopped
+    depends_on:
+      - database
+      - redis
+    env_file: .env
+    environment:
+      APP_URL: "https://${BASE_DOMAIN}"
+      SANCTUM_STATEFUL_DOMAINS: "${BASE_DOMAIN}"
+      SESSION_DOMAIN: ".${BASE_DOMAIN}"
+      DB_DATABASE: "${DB_DATABASE}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=reverse-proxy
+      - traefik.http.routers.account.rule=Host(`account.${BASE_DOMAIN}`)
+      - traefik.http.routers.account.tls.certresolver=cloudflare
+      - traefik.http.routers.backend.rule=Host(`api.${BASE_DOMAIN}`)
+      - traefik.http.routers.backend.tls.certresolver=cloudflare
+      - traefik.http.services.backend.loadbalancer.server.port=8080
+    networks:
+      - backend
+      - reverse-proxy
+
+  scheduler:
+    image: challenger1304/themenschaedel-backend:nightly
+    restart: unless-stopped
+    depends_on:
+      - app
+      - database
+      - redis
+    entrypoint: start scheduler
+    env_file: .env
+    environment:
+      APP_URL: "https://${BASE_DOMAIN}"
+      SANCTUM_STATEFUL_DOMAINS: "${BASE_DOMAIN}"
+      SESSION_DOMAIN: ".${BASE_DOMAIN}"
+      DB_DATABASE: "${DB_DATABASE}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+    networks:
+      - backend
+
+  worker:
+    image: challenger1304/themenschaedel-backend:nightly
+    restart: unless-stopped
+    depends_on:
+      - app
+      - database
+      - redis
+    entrypoint: start worker
+    env_file: .env
+    environment:
+      APP_URL: "https://${BASE_DOMAIN}"
+      SANCTUM_STATEFUL_DOMAINS: "${BASE_DOMAIN}"
+      SESSION_DOMAIN: ".${BASE_DOMAIN}"
+      DB_DATABASE: "${DB_DATABASE}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+    networks:
+      - backend
+
+  database:
+    image: mysql:8.0
+    #ports:
+    #  - '${FORWARD_DB_PORT:-3306}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+      - database:/var/lib/mysql
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping" ]
+
+  redis:
+    image: redis:alpine
+    ports:
+      - '${FORWARD_REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis:/data
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+
+networks:
+  backend:
+  reverse-proxy:
+    external: true
+
+volumes:
+  database:
+    driver: local
+  redis:
+    driver: local
