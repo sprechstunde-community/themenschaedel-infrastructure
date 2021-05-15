@@ -10,10 +10,10 @@ services:
       - "--api.dashboard=true"
       - "--api.insecure=false"
 
-      - "--entryPoints.http.address=:80"
+      - "--entryPoints.http.address=:${HTTP_PORT:-80}"
       - "--entrypoints.http.http.redirections.entryPoint.to=https"
       - "--entrypoints.http.http.redirections.entryPoint.scheme=https"
-      - "--entryPoints.https.address=:443"
+      - "--entryPoints.https.address=:${HTTP_PORT_SSL:-443}"
       - "--entrypoints.https.http.tls=true"
 
       - "--providers.docker=true"
@@ -27,8 +27,8 @@ services:
     networks:
       - reverse-proxy
     ports:
-      - 80:80
-      - 443:443
+      - ${HTTP_PORT:-80}:${HTTP_PORT:-80}
+      - ${HTTP_PORT_SSL:-443}:${HTTP_PORT_SSL:-443}
     volumes:
       - traefik:/etc/traefik
       - /var/run/docker.sock:/var/run/docker.sock
