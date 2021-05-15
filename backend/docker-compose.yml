@@ -6,11 +6,25 @@ x-backend-defaults: &backend-common
   depends_on:
     - database
     - redis
-  env_file: .env
   environment: &backend-env
+    APP_KEY: "${BACKEND_APP_KEY}"
+    APP_DEBUG: "false"
+    CACHE_DRIVER: "redis"
+    DB_HOST: "database"
     DB_DATABASE: "${BACKEND_DB_DATABASE:-themenschaedel}"
     DB_USERNAME: "${BACKEND_DB_USERNAME:-themenschaedel}"
     DB_PASSWORD: "${BACKEND_DB_PASSWORD}"
+    MAIL_MAILER: "smtp"
+    MAIL_HOST: "$MAIL_HOST"
+    MAIL_PORT: "${MAIL_PORT:-587}"
+    MAIL_USERNAME: "$MAIL_USERNAME"
+    MAIL_PASSWORD: "$MAIL_PASSWORD"
+    MAIL_ENCRYPTION: "tls"
+    MAIL_FROM_ADDRESS: "$MAIL_FROM"
+    MAIL_FROM_NAME: "${MAIL_FROM_NAME:-}"
+    PODCAST_RSS_FEED: "$BACKEND_PODCAST_RSS_FEED"
+    REDIS_HOST: "redis"
+    SESSION_DRIVER: "redis"
   networks:
     - backend
 
@@ -22,6 +36,7 @@ services:
       APP_URL: "https://${HTTP_BASE_DOMAIN:-localhost}"
       SANCTUM_STATEFUL_DOMAINS: "${HTTP_BASE_DOMAIN:-localhost}"
       SESSION_DOMAIN: ".${HTTP_BASE_DOMAIN:-localhost}"
+      TRUSTED_PROXIES: "${HTTP_TRUSTED_PROXY_URL}"
     labels:
       - traefik.enable=true
       - traefik.docker.network=reverse-proxy
