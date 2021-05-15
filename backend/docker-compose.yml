@@ -29,9 +29,11 @@ services:
 
       - traefik.http.routers.account.rule=Host(`account.${HTTP_BASE_DOMAIN:-localhost}`)
       - traefik.http.routers.account.tls.certresolver=cloudflare
+      - traefik.http.routers.account.entrypoints=https
 
       - traefik.http.routers.backend.rule=Host(`api.${HTTP_BASE_DOMAIN:-localhost}`)
       - traefik.http.routers.backend.tls.certresolver=cloudflare
+      - traefik.http.routers.backend.entrypoints=https
     networks:
       - backend
       - reverse-proxy
