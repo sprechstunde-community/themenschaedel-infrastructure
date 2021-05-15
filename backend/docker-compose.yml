@@ -1,79 +1,62 @@
 version: '3'
 
+x-backend-defaults: &backend-common
+  image: challenger1304/themenschaedel-backend:nightly
+  restart: unless-stopped
+  depends_on:
+    - database
+    - redis
+  env_file: .env
+  environment: &backend-env
+    DB_DATABASE: "${BACKEND_DB_DATABASE:-themenschaedel}"
+    DB_USERNAME: "${BACKEND_DB_USERNAME:-themenschaedel}"
+    DB_PASSWORD: "${BACKEND_DB_PASSWORD}"
+  networks:
+    - backend
+
 services:
   app:
-    image: challenger1304/themenschaedel-backend:nightly
-    restart: unless-stopped
-    depends_on:
-      - database
-      - redis
-    env_file: .env
+    <<: *backend-common
     environment:
-      APP_URL: "https://${BASE_DOMAIN}"
-      SANCTUM_STATEFUL_DOMAINS: "${BASE_DOMAIN}"
-      SESSION_DOMAIN: ".${BASE_DOMAIN}"
-      DB_DATABASE: "${DB_DATABASE}"
-      DB_USERNAME: "${DB_USERNAME}"
-      DB_PASSWORD: "${DB_PASSWORD}"
+      <<: *backend-env
+      APP_URL: "https://${HTTP_BASE_DOMAIN:-localhost}"
+      SANCTUM_STATEFUL_DOMAINS: "${HTTP_BASE_DOMAIN:-localhost}"
+      SESSION_DOMAIN: ".${HTTP_BASE_DOMAIN:-localhost}"
     labels:
       - traefik.enable=true
       - traefik.docker.network=reverse-proxy
-      - traefik.http.routers.account.rule=Host(`account.${BASE_DOMAIN}`)
-      - traefik.http.routers.account.tls.certresolver=cloudflare
-      - traefik.http.routers.backend.rule=Host(`api.${BASE_DOMAIN}`)
-      - traefik.http.routers.backend.tls.certresolver=cloudflare
       - traefik.http.services.backend.loadbalancer.server.port=8080
+
+      - traefik.http.routers.account.rule=Host(`account.${HTTP_BASE_DOMAIN:-localhost}`)
+      - traefik.http.routers.account.tls.certresolver=cloudflare
+
+      - traefik.http.routers.backend.rule=Host(`api.${HTTP_BASE_DOMAIN:-localhost}`)
+      - traefik.http.routers.backend.tls.certresolver=cloudflare
     networks:
       - backend
       - reverse-proxy
 
   scheduler:
-    image: challenger1304/themenschaedel-backend:nightly
-    restart: unless-stopped
+    <<: *backend-common
     depends_on:
       - app
-      - database
-      - redis
     entrypoint: start scheduler
-    env_file: .env
-    environment:
-      APP_URL: "https://${BASE_DOMAIN}"
-      SANCTUM_STATEFUL_DOMAINS: "${BASE_DOMAIN}"
-      SESSION_DOMAIN: ".${BASE_DOMAIN}"
-      DB_DATABASE: "${DB_DATABASE}"
-      DB_USERNAME: "${DB_USERNAME}"
-      DB_PASSWORD: "${DB_PASSWORD}"
-    networks:
-      - backend
 
   worker:
-    image: challenger1304/themenschaedel-backend:nightly
-    restart: unless-stopped
+    <<: *backend-common
     depends_on:
       - app
-      - database
-      - redis
     entrypoint: start worker
-    env_file: .env
-    environment:
-      APP_URL: "https://${BASE_DOMAIN}"
-      SANCTUM_STATEFUL_DOMAINS: "${BASE_DOMAIN}"
-      SESSION_DOMAIN: ".${BASE_DOMAIN}"
-      DB_DATABASE: "${DB_DATABASE}"
-      DB_USERNAME: "${DB_USERNAME}"
-      DB_PASSWORD: "${DB_PASSWORD}"
-    networks:
-      - backend
 
   database:
     image: mysql:8.0
     #ports:
     #  - '${FORWARD_DB_PORT:-3306}:3306'
     environment:
-      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-      MYSQL_DATABASE: '${DB_DATABASE}'
-      MYSQL_USER: '${DB_USERNAME}'
-      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ROOT_PASSWORD: '${BACKEND_DB_PASSWORD}'
+      MYSQL_DATABASE: '${BACKEND_DB_DATABASE:-themenschaedel}'
+      MYSQL_USER: '${BACKEND_DB_USERNAME:-themenschaedel}'
+      MYSQL_PASSWORD: '${BACKEND_DB_PASSWORD}'
     volumes:
       - database:/var/lib/mysql
     networks:
@@ -84,8 +67,6 @@ services:
 
   redis:
     image: redis:alpine
-    ports:
-      - '${FORWARD_REDIS_PORT:-6379}:6379'
     volumes:
       - redis:/data
     networks:
