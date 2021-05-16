@@ -22,6 +22,8 @@ x-backend-defaults: &backend-common
     MAIL_ENCRYPTION: "tls"
     MAIL_FROM_ADDRESS: "$MAIL_FROM"
     MAIL_FROM_NAME: "${MAIL_FROM_NAME:-}"
+    MEILISEARCH_HOST: search:7700
+    MEILISEARCH_KEY: "${MEILI_MASTER_KEY:-}"
     PODCAST_RSS_FEED: "$BACKEND_PODCAST_RSS_FEED"
     REDIS_HOST: "redis"
     SESSION_DRIVER: "redis"
@@ -30,6 +32,7 @@ x-backend-defaults: &backend-common
 
 services:
   app:
+    container_name: schaedel_backend_web
     <<: *backend-common
     environment:
       <<: *backend-env
@@ -54,18 +57,21 @@ services:
       - reverse-proxy
 
   scheduler:
+    container_name: schaedel_backend_scheduler
     <<: *backend-common
     depends_on:
       - app
     entrypoint: start scheduler
 
   worker:
+    container_name: schaedel_backend_worker
     <<: *backend-common
     depends_on:
       - app
     entrypoint: start worker
 
   database:
+    container_name: schaedel_backend_db
     image: mysql:8.0
     #ports:
     #  - '${FORWARD_DB_PORT:-3306}:3306'
@@ -83,6 +89,7 @@ services:
       test: [ "CMD", "mysqladmin", "ping" ]
 
   redis:
+    container_name: schaedel_backend_redis
     image: redis:alpine
     volumes:
       - redis:/data
@@ -91,6 +98,15 @@ services:
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
+
+  search:
+    container_name: schaedel_backend_search
+    image: getmeili/meilisearch:latest
+    volumes:
+      - search:/data.ms
+    networks:
+      - backend
+    restart: unless-stopped
 
 networks:
   backend:
@@ -101,4 +117,6 @@ volumes:
   database:
     driver: local
   redis:
+    driver: local
+  search:
     driver: local
