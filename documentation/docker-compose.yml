@@ -9,9 +9,9 @@ services:
       - traefik.enable=true
       - traefik.docker.network=reverse-proxy
 
-      - traefik.http.routers.backend.rule=Host(`api.docs.${HTTP_BASE_DOMAIN:-localhost}`)
-      - traefik.http.routers.backend.tls.certresolver=cloudflare
-      - traefik.http.routers.backend.entrypoints=https
+      - traefik.http.routers.api-docs.rule=Host(`api.docs.${HTTP_BASE_DOMAIN:-localhost}`)
+      - traefik.http.routers.api-docs.tls.certresolver=cloudflare
+      - traefik.http.routers.api-docs.entrypoints=https
     networks:
       - reverse-proxy
 
