@@ -1,7 +1,7 @@
 version: '3'
 
 x-backend-defaults: &backend-common
-  image: challenger1304/themenschaedel-backend:nightly
+  image: dallyger/themenschaedel-backend:nightly
   restart: unless-stopped
   depends_on:
     - database
